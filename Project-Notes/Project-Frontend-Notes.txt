@@ -1,0 +1,471 @@
+index.js:
+=========
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+import'../node_modules/bootstrap/dist/css/bootstrap.css';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals();
+
+
+index.css:
+==========
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  height: 100vh;
+ 
+
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+
+ListEmployeeComponent.js:
+=========================
+import React, { Component } from 'react'
+import EmployeeService from '../services/EmployeeService';
+import { Link } from 'react-router-dom';
+export default class ListEmployeeComponent extends Component {
+
+     constructor(props)
+     {
+        super(props);
+
+        this.state={
+            employees:[]
+        }
+     }
+
+     componentDidMount()
+        {
+            EmployeeService.getEmployees().then((res)=>
+            {
+                this.setState({employees:res.data})
+            })
+        }
+        
+        deleteEmployee=(employeeId)=>
+            {
+                EmployeeService.deleteEmployee(employeeId).then(res=>
+                    {
+                        EmployeeService.getEmployees().then((res)=>
+                        {
+                            this.setState({employees:res.data})
+                        })
+                    }).catch(error=>
+                        {
+                            console.log(error);
+                        } )
+            }
+
+  render() {
+    return (
+      <div>
+        
+           <h2 className='text-center mt-5'> Employee List </h2>
+           <div className='row'>
+
+           <Link to="/add-employee" className='btn btn-primary my-4'> Add Employee</Link>    
+
+            <table className='table table-striped table-bordered'>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>FIRSTNAME</th>
+                        <th>LASTNAME</th>
+                        <th>EMAIL</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                 <tbody>
+                    {
+                        this.state.employees.map(employee =>
+                        <tr key={employee.id}>
+                            <td>{employee.id}</td>
+                            <td>{employee.firstName}</td>
+                            <td>{employee.lastName}</td>
+                            <td>{employee.email}</td>
+                            <td>
+                    <Link to={`/update-employee/${employee.id}`} className='btn btn-info'> update </Link>                
+                          
+                    <button className='btn btn-danger' style={{marginLeft:"15px"}}
+                    onClick={()=> this.deleteEmployee(employee.id)}> delete </button>      
+                          
+                          
+                          
+                          </td>
+                        </tr>)
+                    }
+                 </tbody>
+            </table>
+           </div>
+
+      </div>
+    )
+  }
+}
+
+
+
+EmployeeService.js:
+===================
+import axios from 'axios';
+
+const EMPLOYEE_API_BASE_URL="http://localhost:7272/api/v1/employees";
+
+class Employee
+{
+ getEmployees()
+ {
+    return axios.get(EMPLOYEE_API_BASE_URL);
+ }
+
+ createEmployee(employee)
+ {
+   return axios.post(EMPLOYEE_API_BASE_URL,employee);
+ }
+
+ getEmployeeById(employeeId)
+ {
+   return axios.get(EMPLOYEE_API_BASE_URL+'/'+employeeId);
+ }
+ updateEmployee(employeeId,employee)
+ {
+   return axios.put(EMPLOYEE_API_BASE_URL+'/'+employeeId,employee)
+ }
+
+ deleteEmployee(employeeId)
+ {
+  return axios.delete(EMPLOYEE_API_BASE_URL+"/"+employeeId);
+ }
+
+}
+export default new Employee();
+
+
+UpdateEmployeeComponent.js:
+===========================
+import React from 'react'
+import { useState,useEffect } from 'react'
+import { useNavigate,useParams } from 'react-router-dom';
+import EmployeeService from '../services/EmployeeService';
+
+function UpdateEmployeeComponent() {
+   
+  let navigate=useNavigate();
+  
+  const [firstName,setFirstName]=useState("");
+  const [lastName,setLastName]=useState("");
+  const [email,setEmail]=useState("");
+  const {id}=useParams();
+
+  useEffect(()=>
+    {
+      EmployeeService.getEmployeeById(id).then((res)=>
+      {
+        setFirstName(res.data.firstName);
+        setLastName(res.data.lastName);
+        setEmail(res.data.email);
+
+      }).catch(error=>
+        {
+          console.log(error);
+        })
+    },[])
+  
+  const cancelHandle=()=>
+    {
+       navigate("/employees");
+    }
+
+  const updateHandler=(e)=>
+    {
+      e.preventDefault();
+      const employee={firstName,lastName,email};
+
+      if(id){
+             EmployeeService.updateEmployee(id,employee).then(res=>{
+              navigate('/employees');
+             });
+      }
+      else{
+        EmployeeService.createEmployee(employee).then(res=>
+          {
+            console.log(res.data);
+            navigate('/employees');
+          })
+      }
+    }
+
+
+
+
+  return (
+    <div className="container mt-3">
+    <div className='row'>
+      <div className='card col-md-6 offset-md-3'>
+      
+        <h3 className='text-center'> Update Employee </h3>
+        <div className='card-body'>
+
+          <form>
+
+          <div className='form-group my-3'>
+            <label className='my-2'>First Name: </label>
+            <input type="text" name="firstName" className='form-control' placeholder='firstName'
+            value={firstName}
+            onChange={(e)=> setFirstName(e.target.value)}/>
+          </div>
+
+          <div className='form-group my-3'>
+            <label className='my-2'>Last Name: </label>
+            <input type="text" name="lastName" className='form-control' placeholder='lastName'
+            value={lastName}
+            onChange={(e)=> setLastName(e.target.value)}/>
+          </div>
+
+          <div className='form-group my-3'>
+            <label className='my-2'>Email: </label>
+            <input type="text" name="email" className='form-control' placeholder='email'
+            value={email}
+            onChange={(e)=> setEmail(e.target.value)}/>
+          </div>
+
+        <button className='btn btn-success'onClick={updateHandler}> Save </button>
+        <button className='btn btn-danger' style={{marginLeft:"10px"}}
+        onClick={cancelHandle}> Cancel </button>
+
+          </form>
+        </div>
+
+      </div>
+      </div> 
+  </div>
+  )
+}
+
+export default UpdateEmployeeComponent
+
+
+
+App.js:
+=======
+import React from 'react'
+import ListEmployeeComponent from './components/ListEmployeeComponent'
+import HeaderComponent from './components/HeaderComponent'
+import FooterComponent from './components/FooterComponent'
+import {BrowserRouter,Routes,Route} from 'react-router-dom'
+import CreateEmployeeComponent from './components/CreateEmployeeComponent'
+import UpdateEmployeeComponent from './components/UpdateEmployeeComponent'
+function App() {
+  return (
+    <div>
+             <HeaderComponent/>   
+             <BrowserRouter>
+                   <div className='container'>
+
+                  <Routes>
+                          
+                          <Route exact path='/' element={<ListEmployeeComponent/>}/>
+                          <Route path='employees' element={<ListEmployeeComponent/>}/>
+                          <Route path="/add-employee" element={<CreateEmployeeComponent/>}/>
+                          <Route path="/update-employee/:id" element={<UpdateEmployeeComponent/>}/>
+
+                  </Routes>
+
+                  
+      
+    </div>
+           </BrowserRouter>
+           <FooterComponent/>
+     </div>
+  )
+}
+
+export default App
+
+
+
+CreateEmployeeComponent.js:
+===========================
+import React from 'react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom';
+import EmployeeService from '../services/EmployeeService';
+
+function CreateEmployeeComponent() {
+
+  const[employee,setEmployee]=useState({
+    firstName:"",
+    lastName:"",
+    email:""
+
+  })
+
+  let navigate=useNavigate();
+
+  const handleClick=(e)=>
+    {
+      const name=e.target.name;
+      const value=e.target.value;
+      setEmployee({...employee,[name]:value});
+    }
+
+    const saveHandler=(e)=>
+      {
+       e.preventDefault();
+       console.log("employee =>"+JSON.stringify(employee));
+
+       EmployeeService.createEmployee(employee).then(res=>
+        {
+          navigate('/employees');
+       })
+      }
+
+    const cancelHandle=()=>
+      {
+         navigate("/employees");
+      }
+
+  return (
+    <div className="container mt-3">
+      <div className='row'>
+        <div className='card col-md-6 offset-md-3' >
+        
+          <h3 className='text-center'> Add Employee </h3>
+          <div className='card-body'>
+
+            <form>
+
+            <div className='form-group my-3'>
+              <label className='my-2'>First Name: </label>
+              <input type="text" name="firstName" className='form-control' placeholder='firstName'
+              value={employee.firstName}
+              onChange={handleClick}/>
+            </div>
+
+            <div className='form-group my-3'>
+              <label className='my-2'>Last Name: </label>
+              <input type="text" name="lastName" className='form-control' placeholder='lastName'
+              value={employee.lastName}
+              onChange={handleClick}/>
+            </div>
+
+            <div className='form-group my-3'>
+              <label className='my-2'>Email: </label>
+              <input type="text" name="email" className='form-control' placeholder='email'
+              value={employee.email}
+              onChange={handleClick}/>
+            </div>
+
+          <button className='btn btn-success'onClick={saveHandler}> Save </button>
+          <button className='btn btn-danger' style={{marginLeft:"10px"}}
+          onClick={cancelHandle}> Cancel </button>
+
+            </form>
+          </div>
+
+        </div>
+        </div> 
+    </div>
+  )
+}
+
+export default CreateEmployeeComponent
+
+
+
+
+HeaderComponent.js:
+===================
+import React from 'react'
+
+function HeaderComponent() {
+  return (
+    <div>
+         <header >
+
+         <div className='navbar navbar-expand-lg navbar-dark bg-dark'>
+            <div className='container'>
+            <a href='' className='navbar-brand'> Employee Management System</a>
+            </div>
+         </div>
+
+         </header>
+    </div>
+  )
+}
+
+export default HeaderComponent
+
+
+
+
+FooterComponent.js:
+===================
+import React from 'react'
+import  '../App.css';
+function FooterComponent() {
+  return (
+    <div>
+          <footer className='footer'>
+            <span className=''> All Right Reserved 2024 &copy;RajeshValmiki</span>
+          </footer>
+    </div>
+  )
+}
+
+export default FooterComponent
+
+
+
+App.css:
+========
+.footer
+{
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 30px;
+  background-color:black;
+  text-align: center;
+  color:white;
+  line-height: 30px;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
